@@ -3,74 +3,29 @@
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
-#include <argp.h>
+#include <unistd.h>
 
-/*** arg_parse http://www.gnu.org/software/libc/manual/html_node/Argp-Example-3.html#Argp-Example-3
- * i dont even know why i wrote all this out i could have just copy pasted but hopefully you understand better in the mroning.
- * it would be good to understand this (would give more understanding of c not just argp -- missed the comments look at link please */
-const char *argp_program_version = "0.0.1";
-const char *argp_program_bug_address = "<toqoz@hotmail.com>";
-static char doc[] = "Testing out argp for now...";
-static char args_doc[] = "ARG1 ARG2";
+#define BUFSIZE 2048
 
-static struct argp_option options[] = {
-    {"verbose", 'v', 0, 0, "Produce verbose output"},
-    {"quiet",   'q', 0, 0, "Don't produce any output"},
-    {"silent",  's', 0, OPTION_ALIAS},
-    {"output",  'o', "FILE", 0, "Output to file instead of stdout" },
-    { 0 }
-};
-
-struct arguments
+void help()
 {
-    char *args[2];
-    int  silent, verbose;
-    char *output_file;
-};
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-    struct arguments *arguments = state->input;
-
-    switch(key)
-    {
-        case 'q': case 's':
-            arguments->silent = 1;
-            break;
-        case 'v':
-            arguments->verbose = 1;
-            break;
-        case 'o':
-            arguments->output_file = arg;
-            break;
-
-        case ARGP_KEY_ARG:
-            if (state->arg_num >= 2)
-                argp_usage (state);
-
-            arguments->args[state->arg_num] = arg;
-
-            break;
-
-        case ARGP_KEY_END:
-            if (state->arg_num < 2)
-                argp_usage(state);
-            break;
-
-        default:
-            return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
+    printf("basic scrolling from stdin or other.\n"
+           "usage: scroll [-h | -r | -t | -c | -b]\n"
+           "       -h Show this help\n"
+           "       -r Print with a carriage return instead of a new line\n"
+           "       -t Interval between scroll ticks in ms\n"
+           "       -c Number of characters to print per scroll (excluding -b)\n"
+           "       -b String to put at the very beginning, for easier parsing/piping\n"
+           );
+    exit(0);
 }
-
-static struct argp argp = { options, parse_opt, args_doc, doc };
 
 // Append a character to a string a set amount of times.
 char *append(char *dest, char *add, int times)
 {
     int i = 0;
-    // calloc(extra space + original length + 0/)
-    char *concat = calloc((times + strlen(dest) + 1), 1);
+    // calloc(extra space + original length + extra space + 0/)
+    char *concat = calloc((times + strlen(dest) + times + 1), 1);
     assert(concat != NULL);
 
     {
@@ -81,7 +36,7 @@ char *append(char *dest, char *add, int times)
     return concat;
 }
 
-void scroll(char *string, int interval)
+void scroll(char *string, char *beginning, int interval, int characters, int carriage)
 {
     int i = 0;
     // Nanosleep requires a timespec struct.
@@ -94,28 +49,48 @@ void scroll(char *string, int interval)
     for(i = 0; string[i] != '\0'; i++)
     {
         nanosleep(&req, &req);
-        printf("%.*s\n", 20, &string[i]);
+
+        // Sometimes we want to use a carriage return.
+        if(carriage == 0) printf("%s%.*s\n", beginning, characters, &string[i]);
+        else printf("%s%.*s \b\r", beginning, characters, &string[i]);
+
         fflush(stdout);
     }
 }
 
 int main(int argc, char *argv[])
 {
-    struct arguments arguments;
-    arguments.silent = 0;
-    arguments.verbose = 0;
-    arguments.output_file = "-";
-
-    char space = '-';
+    char string[BUFSIZE];
+    char *beginning = "";
     char *final;
-    char *string = "hello";
+    char space = '-';
+    int  interval = 20;
+    int  characters = 20;
+    int  carriage = 0;
 
-    argp_parse(&argp, argc, argv, 0, 0, &arguments);
+    // Get input from stdin.
+    fgets(string, sizeof string, stdin);
+    // Strip a new line at the end.
+    string[strcspn(string, "\n")] = 0;
+
+    // Parse arguments.
+    int  opt;
+    while ((opt = getopt(argc, argv, "hrt:c:b:")) != -1) {
+        switch(opt)
+        {
+            case 'h': help(); break;
+            case 'r': carriage = 1; break; 
+            case 't': interval = strtol(optarg, NULL, 10); break;
+            case 'c': characters = strtol(optarg, NULL, 10); break;
+            case 'b': beginning = optarg; break;
+            default: help();
+        }
+    }
 
     // Create a string with spaces added to the front.
-    final = append(string, &space, 20);
+    final = append(string, &space, characters); 
 
-    scroll(final, 10);
+    scroll(final, beginning, interval, characters, carriage);
     free(final);
 
     // End on a new line.
