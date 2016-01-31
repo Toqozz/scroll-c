@@ -1,6 +1,6 @@
 # scroll-c
 
-scroll text from stdin.
+scroll text from stdin - rewrite of [scroll-python](https://github.com/Toqozz/scroll-python)
 
 ### usage
 
