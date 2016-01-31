@@ -4,6 +4,6 @@ scroll text from stdin.
 
 ### usage
 
-<input> | scroll [options]
+\<input\> | scroll [options]
 
 easy peasy.
