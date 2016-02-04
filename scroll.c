@@ -21,16 +21,17 @@ void help()
 }
 
 // Append a character to a string a set amount of times.
-char *append(char *dest, char *add, int times)
+char *append(char *dest, int times)
 {
     int i = 0;
+    char add = ' ';
     // calloc(extra space + original length + extra space + 0/)
     char *concat = calloc((times + strlen(dest) + times + 1), 1);
     assert(concat != NULL);
 
     {
         for(i = 0; i < times; i++)
-            strncat(concat, add, 1);
+            strncat(concat, &add, 1);
         strncat(concat, dest, strlen(concat) + strlen(dest));
     }
     return concat;
@@ -63,7 +64,6 @@ int main(int argc, char *argv[])
     char string[BUFSIZE];
     char *beginning = "";
     char *final;
-    char space = '-';
     int  interval = 20;
     int  characters = 20;
     int  carriage = 0;
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
     }
 
     // Create a string with spaces added to the front.
-    final = append(string, &space, characters); 
+    final = append(string, characters); 
 
     scroll(final, beginning, interval, characters, carriage);
     free(final);
